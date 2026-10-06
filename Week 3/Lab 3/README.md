@@ -11,6 +11,25 @@ Endpoint `GET /orders` hỗ trợ:
 
 Ví dụ:
 
-```http
-GET /orders?status=paid&limit=5&sort=-total
-```
+![alt text](<Screenshot 2026-10-06 111440-1.png>)
+
+
+![alt text](<Screenshot 2026-10-06 111538.png>)
+
+
+![alt text](<Screenshot 2026-10-06 111606.png>)
+
+
+![alt text](<Screenshot 2026-10-06 111636.png>)
+
+
+![alt text](<Screenshot 2026-10-06 111657.png>)
+
+
+![alt text](<Screenshot 2026-10-06 111717.png>)
+
+
+![alt text](<Screenshot 2026-10-06 111739.png>)
+
+
+![alt text](<Screenshot 2026-10-06 111756.png>)
