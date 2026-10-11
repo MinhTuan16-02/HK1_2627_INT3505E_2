@@ -1,0 +1,294 @@
+openapi: 3.0.3
+info:
+  title: Tasks API
+  version: 1.0.0
+  description: REST API quản lý công việc, dùng Flask và SQLite.
+servers:
+  - url: http://127.0.0.1:5000/v1
+    description: Local development
+tags:
+  - name: Tasks
+    description: Quản lý công việc
+security:
+  - bearerAuth: []
+
+paths:
+  /tasks:
+    get:
+      tags: [Tasks]
+      summary: Lấy danh sách task
+      operationId: listTasks
+      parameters:
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/PageLimit'
+      responses:
+        '200':
+          description: Danh sách task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Tasks]
+      summary: Tạo task mới
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskInput'
+            example:
+              title: Hoàn thành bài SOA
+              status: open
+              priority: high
+              dueDate: '2026-10-20'
+              assigneeId: member-01
+      responses:
+        '201':
+          description: Tạo task thành công
+          headers:
+            Location:
+              description: URL của task mới
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /tasks/{taskId}:
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        description: UUID của task
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tasks]
+      summary: Xem chi tiết task
+      operationId: getTaskById
+      responses:
+        '200':
+          description: Thông tin task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Tasks]
+      summary: Cập nhật một phần task
+      operationId: patchTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskInput'
+            example:
+              status: done
+      responses:
+        '200':
+          description: Task sau khi cập nhật
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Tasks]
+      summary: Xóa task
+      operationId: deleteTask
+      responses:
+        '204':
+          description: Xóa thành công, không có nội dung
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  parameters:
+    StatusFilter:
+      name: status
+      in: query
+      description: Lọc theo trạng thái
+      schema:
+        type: string
+        enum: [open, in_progress, done]
+    PageLimit:
+      name: limit
+      in: query
+      description: Số task tối đa trả về
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  schemas:
+    Task:
+      type: object
+      required: [id, title, status, priority, dueDate, assigneeId]
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        status:
+          type: string
+          enum: [open, in_progress, done]
+        priority:
+          type: string
+          enum: [low, normal, high]
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+        assigneeId:
+          type: string
+          nullable: true
+    CreateTaskInput:
+      type: object
+      required: [title]
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        status:
+          type: string
+          enum: [open, in_progress, done]
+          default: open
+        priority:
+          type: string
+          enum: [low, normal, high]
+          default: normal
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+        assigneeId:
+          type: string
+          minLength: 1
+          nullable: true
+    UpdateTaskInput:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        status:
+          type: string
+          enum: [open, in_progress, done]
+        priority:
+          type: string
+          enum: [low, normal, high]
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+        assigneeId:
+          type: string
+          minLength: 1
+          nullable: true
+    TaskPage:
+      type: object
+      required: [items, total, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+    Problem:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+  responses:
+    BadRequest:
+      description: Tham số hoặc JSON không hợp lệ
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: Thiếu hoặc sai token
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Không tìm thấy task
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnsupportedMediaType:
+      description: Content-Type không được hỗ trợ
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ValidationError:
+      description: Dữ liệu không thỏa các quy tắc
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
