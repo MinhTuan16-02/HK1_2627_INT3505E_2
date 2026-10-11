@@ -1,0 +1,204 @@
+openapi: 3.0.3
+info:
+  title: Petstore API
+  version: 1.0.0
+  description: Đặc tả OpenAPI chuẩn cho hệ thống Petstore - Đầy đủ 5 endpoints CRUD
+servers:
+  - url: http://localhost:5000/v1
+    description: Local dev server
+tags:
+  - name: pets
+    description: Quản lý danh mục và thông tin thú cưng
+security:
+  - bearerAuth: []
+paths:
+  /pets:
+    get:
+      summary: Lấy danh sách thú cưng
+      operationId: listPets
+      tags:
+        - pets
+      parameters:
+        - name: limit
+          in: query
+          description: Số lượng thú cưng tối đa cần lấy
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Danh sách thú cưng trả về thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pets'
+        default:
+          $ref: '#/components/responses/GeneralError'
+    post:
+      summary: Tạo mới thú cưng
+      operationId: createPets
+      tags:
+        - pets
+      requestBody:
+        description: Thông tin thú cưng cần tạo
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePetInput'
+      responses:
+        '201':
+          description: Tạo thú cưng thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        default:
+          $ref: '#/components/responses/GeneralError'
+
+  /pets/{petId}:
+    parameters:
+      - name: petId
+        in: path
+        required: true
+        description: ID định danh của thú cưng
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+    get:
+      summary: Xem chi tiết một thú cưng
+      operationId: showPetById
+      tags:
+        - pets
+      responses:
+        '200':
+          description: Thông tin chi tiết thú cưng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/GeneralError'
+    put:
+      summary: Cập nhật thông tin thú cưng
+      operationId: updatePet
+      tags:
+        - pets
+      requestBody:
+        description: Dữ liệu cần cập nhật của thú cưng
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePetInput'
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/GeneralError'
+    delete:
+      summary: Xóa một thú cưng
+      operationId: deletePet
+      tags:
+        - pets
+      responses:
+        '204':
+          description: Xóa thành công (No Content)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/GeneralError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    NotFound:
+      description: Không tìm thấy tài nguyên
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Dữ liệu gửi lên không hợp lệ
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    GeneralError:
+      description: Lỗi không mong đợi
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "Shiba Inu"
+        tag:
+          type: string
+          example: "dog"
+    CreatePetInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "Mèo Mướp"
+        tag:
+          type: string
+          example: "cat"
+    UpdatePetInput:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Golden Retriever"
+        tag:
+          type: string
+          example: "dog"
+    Pets:
+      type: array
+      items:
+        $ref: '#/components/schemas/Pet'
+    Error:
+      type: object
+      required:
+        - status
+        - title
+      properties:
+        status:
+          type: integer
+          example: 404
+        title:
+          type: string
+          example: "Not Found"
+        detail:
+          type: string
+          example: "Tài nguyên không tồn tại trên hệ thống."
