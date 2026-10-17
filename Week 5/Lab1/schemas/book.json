@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/lab1-book-create.json",
+  "title": "Book create request (Lab 1)",
+  "description": "Input schema; server generates id and createdAt.",
+  "type": "object",
+  "required": ["title", "isbn", "price", "authors"],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "\\S"
+    },
+    "isbn": {
+      "type": "string",
+      "pattern": "^[0-9]{13}$"
+    },
+    "price": {
+      "type": "object",
+      "required": ["amount", "currency"],
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["VND", "USD", "EUR"]
+        }
+      }
+    },
+    "authors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/author"
+      }
+    },
+    "categoryId": {
+      "type": "string",
+      "pattern": "^category_[1-9][0-9]*$"
+    },
+    "stock": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "$defs": {
+    "author": {
+      "type": "object",
+      "required": ["id", "role"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^author_[1-9][0-9]*$"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["lead", "co", "ed"]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/library/schemas/member.json",
+  "title": "Library Member API representation",
+  "description": "Public member representation for an authorized library staff client; private credentials are never exposed.",
+  "type": "object",
+  "required": ["id", "fullName", "email", "membershipStatus", "joinedAt", "loanLimit", "activeLoans"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"type": "string", "pattern": "^member_[1-9][0-9]*$"},
+    "fullName": {"type": "string", "minLength": 1, "maxLength": 120, "pattern": "\\S"},
+    "email": {"type": "string", "format": "email", "maxLength": 255},
+    "membershipStatus": {"type": "string", "enum": ["active", "suspended", "expired"]},
+    "joinedAt": {"type": "string", "format": "date-time"},
+    "loanLimit": {"type": "integer", "minimum": 1, "maximum": 20},
+    "activeLoans": {"type": "integer", "minimum": 0}
+  }
+}

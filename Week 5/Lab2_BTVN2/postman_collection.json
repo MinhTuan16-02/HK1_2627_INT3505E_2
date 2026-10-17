@@ -1,0 +1,426 @@
+{
+  "info": {
+    "name": "INT3505E Week 5 - Lab2 & BTVN2 Bookstore API",
+    "description": "Offset pagination, cursor pagination, filtering and deterministic multi-key sorting.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:5001",
+      "type": "string"
+    },
+    {
+      "key": "cursorToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "page1Ids",
+      "value": "[]",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Cursor - first page, sort=-id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?strategy=cursor&limit=3&sort=-id"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const obj = pm.response.json();",
+              "",
+              "pm.test(\"Response has data and page\", function () {",
+              "    pm.expect(obj).to.have.property(\"data\");",
+              "    pm.expect(obj).to.have.property(\"page\");",
+              "    pm.expect(obj.data).to.be.an(\"array\");",
+              "});",
+              "",
+              "pm.test(\"First page contains 3 books\", function () {",
+              "    pm.expect(obj.data.length).to.eql(3);",
+              "});",
+              "",
+              "pm.test(\"Default descending id order is correct\", function () {",
+              "    pm.expect(obj.data.map(x => x.id)).to.eql([\"book_12\", \"book_11\", \"book_10\"]);",
+              "});",
+              "",
+              "pm.test(\"Next cursor exists\", function () {",
+              "    pm.expect(obj.page.more).to.eql(true);",
+              "    pm.expect(obj.page.next).to.be.a(\"string\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Offset - first 5",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?strategy=offset&offset=0&limit=5&sort=id"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const obj = pm.response.json();",
+              "",
+              "pm.test(\"Offset pagination structure is correct\", function () {",
+              "    pm.expect(obj.data).to.be.an(\"array\");",
+              "    pm.expect(obj.pagination.offset).to.eql(0);",
+              "    pm.expect(obj.pagination.limit).to.eql(5);",
+              "    pm.expect(obj.pagination.total).to.eql(12);",
+              "    pm.expect(obj.pagination.has_next).to.eql(true);",
+              "});",
+              "",
+              "pm.test(\"First five ids are correct\", function () {",
+              "    pm.expect(obj.data.map(x => x.id)).to.eql([",
+              "        \"book_1\", \"book_2\", \"book_3\", \"book_4\", \"book_5\"",
+              "    ]);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Offset - next 5",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?strategy=offset&offset=5&limit=5&sort=id"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const obj = pm.response.json();",
+              "",
+              "pm.test(\"Offset metadata is correct\", function () {",
+              "    pm.expect(obj.pagination.offset).to.eql(5);",
+              "    pm.expect(obj.pagination.limit).to.eql(5);",
+              "    pm.expect(obj.pagination.total).to.eql(12);",
+              "    pm.expect(obj.pagination.has_next).to.eql(true);",
+              "});",
+              "",
+              "pm.test(\"Second page begins at book_6\", function () {",
+              "    pm.expect(obj.data.map(x => x.id)).to.eql([",
+              "        \"book_6\", \"book_7\", \"book_8\", \"book_9\", \"book_10\"",
+              "    ]);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Filter genre=tech",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?strategy=offset&genre=tech&limit=20"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const obj = pm.response.json();",
+              "",
+              "pm.test(\"Technology filter returns 6 books\", function () {",
+              "    pm.expect(obj.pagination.total).to.eql(6);",
+              "    pm.expect(obj.data.length).to.eql(6);",
+              "});",
+              "",
+              "pm.test(\"All books have genre tech\", function () {",
+              "    pm.expect(obj.data.every(x => x.category.slug === \"tech\")).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Filter category=1",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?strategy=offset&category=1&limit=20"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const obj = pm.response.json();",
+              "",
+              "pm.test(\"Category 1 contains 6 books\", function () {",
+              "    pm.expect(obj.pagination.total).to.eql(6);",
+              "    pm.expect(obj.data.length).to.eql(6);",
+              "});",
+              "",
+              "pm.test(\"Every result belongs to category 1\", function () {",
+              "    pm.expect(obj.data.every(x => x.category.id === 1)).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Multi-key sort -price,title",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?strategy=cursor&genre=tech&sort=-price,title&limit=6"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const obj = pm.response.json();",
+              "",
+              "pm.test(\"Six technology books returned\", function () {",
+              "    pm.expect(obj.data.length).to.eql(6);",
+              "});",
+              "",
+              "pm.test(\"Sorted by price DESC then title ASC\", function () {",
+              "    for (let i = 1; i < obj.data.length; i++) {",
+              "        const prev = obj.data[i - 1];",
+              "        const curr = obj.data[i];",
+              "        pm.expect(prev.price.amount).to.be.at.least(curr.price.amount);",
+              "        if (prev.price.amount === curr.price.amount) {",
+              "            pm.expect(prev.title.localeCompare(curr.title)).to.be.at.most(0);",
+              "        }",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Multi-key sort price,-id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?strategy=cursor&sort=price,-id&limit=12"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const obj = pm.response.json();",
+              "",
+              "pm.test(\"Sorted by price ASC and id DESC on ties\", function () {",
+              "    for (let i = 1; i < obj.data.length; i++) {",
+              "        const prev = obj.data[i - 1];",
+              "        const curr = obj.data[i];",
+              "        pm.expect(prev.price.amount).to.be.at.most(curr.price.amount);",
+              "        if (prev.price.amount === curr.price.amount) {",
+              "            const prevId = Number(prev.id.split(\"_\")[1]);",
+              "            const currId = Number(curr.id.split(\"_\")[1]);",
+              "            pm.expect(prevId).to.be.at.least(currId);",
+              "        }",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cursor - page 1 (store cursor and ids)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?strategy=cursor&genre=tech&sort=-price,title&limit=2"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Page 1 status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const obj = pm.response.json();",
+              "",
+              "pm.test(\"Page 1 contains two books\", function () {",
+              "    pm.expect(obj.data.length).to.eql(2);",
+              "});",
+              "",
+              "pm.test(\"Next cursor exists\", function () {",
+              "    pm.expect(obj.page.more).to.eql(true);",
+              "    pm.expect(obj.page.next).to.be.a(\"string\");",
+              "});",
+              "",
+              "pm.collectionVariables.set(\"cursorToken\", obj.page.next);",
+              "pm.collectionVariables.set(\"page1Ids\", JSON.stringify(obj.data.map(x => x.id)));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cursor - page 2 (uses stored cursor)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?strategy=cursor&genre=tech&sort=-price,title&limit=2&cursor={{cursorToken}}"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Page 2 status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const obj = pm.response.json();",
+              "const page1Ids = JSON.parse(pm.collectionVariables.get(\"page1Ids\") || \"[]\");",
+              "const page2Ids = obj.data.map(x => x.id);",
+              "",
+              "pm.test(\"Page 2 contains data\", function () {",
+              "    pm.expect(page2Ids.length).to.be.above(0);",
+              "});",
+              "",
+              "pm.test(\"Page 1 and page 2 do not overlap\", function () {",
+              "    const overlap = page2Ids.filter(id => page1Ids.includes(id));",
+              "    pm.expect(overlap).to.eql([]);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error - sort changed",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?strategy=cursor&genre=tech&sort=title&limit=2&cursor={{cursorToken}}"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Returns 400 sort_chg\", function () {",
+              "    pm.response.to.have.status(400);",
+              "    pm.expect(pm.response.json().error).to.eql(\"sort_chg\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error - bad sort",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?sort=foo"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Returns 400 bad_sort\", function () {",
+              "    pm.response.to.have.status(400);",
+              "    pm.expect(pm.response.json().error).to.eql(\"bad_sort\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error - bad cursor",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/books?cursor=broken"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Returns 400 bad_cursor\", function () {",
+              "    pm.response.to.have.status(400);",
+              "    pm.expect(pm.response.json().error).to.eql(\"bad_cursor\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
