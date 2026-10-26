@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: Social Network Auth API
+  version: 1.0.0
+  description: |
+    Bài thực hành INT3505E, Tuần 6. JWT HS256; access 900 giây,
+    refresh 2592000 giây. Xác thực trước, kiểm scope rồi kiểm ownership.
+    Dữ liệu và trạng thái thu hồi nằm trong bộ nhớ của một process.
+servers:
+  - url: http://127.0.0.1:5000
+    description: Flask development server trên máy cá nhân
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      summary: Đăng nhập bằng username hoặc email
+      description: |
+        Không yêu cầu token hoặc scope. Nếu gửi cả username và email,
+        username không rỗng được ưu tiên. Sai tài khoản và sai mật khẩu
+        cùng trả invalid_credentials; cả hai đều chạy Argon2id verify.
+        Tối đa 10 yêu cầu mỗi IP trong cửa sổ trượt 60 giây.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              anyOf:
+                - required: [username]
+                - required: [email]
+              properties:
+                username:
+                  type: string
+                  minLength: 1
+                  maxLength: 254
+                  example: alice
+                email:
+                  type: string
+                  minLength: 1
+                  maxLength: 254
+                  example: alice@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 1
+                  maxLength: 1024
+                  example: alice-pass-123
+            examples:
+              username:
+                value: {username: alice, password: alice-pass-123}
+              email:
+                value: {email: bob@example.com, password: bob-pass-123}
+      responses:
+        '200':
+          description: Cặp JWT; access có user_id, roles, scopes; sub là chuỗi ID.
+          headers:
+            Cache-Control:
+              schema: {type: string, example: no-store}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TokenPair'}
+        '400':
+          description: Thiếu body, JSON lỗi, thiếu trường hoặc giá trị sai kiểu/rỗng/quá dài.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: invalid_request}
+        '401':
+          description: Tài khoản không tồn tại hoặc mật khẩu sai; phản hồi giống nhau.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: invalid_credentials}
+        '429':
+          description: Vượt giới hạn đăng nhập hoặc bảng IP đang đầy.
+          headers:
+            Retry-After:
+              description: Số giây chờ trước khi thử lại.
+              schema: {type: integer, minimum: 1, example: 60}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: rate_limited}
+  /auth/refresh:
+    post:
+      operationId: refresh
+      summary: Đổi refresh token lấy cặp token mới
+      description: |
+        Authorization phải mang refresh token, không dùng access token.
+        Không yêu cầu scope riêng; quyền của access mới được lấy lại từ USERS.
+        Mỗi jti refresh chỉ được dùng một lần. Kiểm tra và ghi blocklist
+        được bảo vệ bằng khóa trong process. Không cần request body.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Cặp token mới; refresh cũ đã bị thu hồi.
+          headers:
+            Cache-Control:
+              schema: {type: string, example: no-store}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TokenPair'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /posts/{id}:
+    get:
+      operationId: getPost
+      summary: Đọc bài viết theo ID
+      description: |
+        Cần access token và scope posts:read. Với Bearer HTTP, mảng trong
+        security để rỗng; scope nghiệp vụ được mô tả ở đây.
+        Bài public cho mọi user đã xác thực có scope đọc.
+        Bài private chỉ cho author_id trùng user_id trong access token.
+        Thứ tự kiểm tra: JWT -> posts:read -> tồn tại -> ownership.
+      x-required-scopes: [posts:read]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID nguyên không âm; ID chưa tồn tại trả 404.
+          schema: {type: integer, minimum: 0, example: 1}
+      responses:
+        '200':
+          description: Bài viết được phép đọc, chỉ gồm các trường đã chọn.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Post'}
+              example:
+                id: 1
+                title: Hello SOA
+                content: Alice's public post.
+                author_id: 1
+                is_private: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Thiếu posts:read hoặc bài private thuộc người khác.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              examples:
+                ownership:
+                  value:
+                    error: forbidden
+                    message: You do not have permission to view this private post
+                scope:
+                  value: {error: insufficient_scope}
+        '404':
+          description: Không tìm thấy bài viết sau khi xác thực và kiểm scope.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: not_found}
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token cho posts; refresh token cho auth/refresh.
+  schemas:
+    TokenPair:
+      type: object
+      additionalProperties: false
+      required: [access_token, refresh_token]
+      properties:
+        access_token: {type: string, description: JWT access sống 900 giây.}
+        refresh_token: {type: string, description: JWT refresh sống 2592000 giây và dùng một lần.}
+    Post:
+      type: object
+      additionalProperties: false
+      required: [id, title, content, author_id, is_private]
+      properties:
+        id: {type: integer}
+        title: {type: string}
+        content: {type: string}
+        author_id: {type: integer}
+        is_private: {type: boolean}
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error: {type: string}
+        message: {type: string}
+  responses:
+    Unauthorized:
+      description: |
+        Thiếu token, hết hạn, bị thu hồi, sai loại access/refresh, sai chữ ký,
+        sai thuật toán, issuer/audience không khớp hoặc user refresh không còn tồn tại.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {error: unauthorized}
