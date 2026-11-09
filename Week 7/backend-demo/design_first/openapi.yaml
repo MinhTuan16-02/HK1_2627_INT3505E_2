@@ -1,0 +1,114 @@
+openapi: 3.0.3
+info:
+  title: Design-First - Product API
+  version: 1.0.0
+  description: Viet hop dong truoc. Connexion doc paths, schema va operationId de tao API.
+servers:
+  - url: /
+tags:
+  - name: products
+paths:
+  /products:
+    get:
+      tags: [products]
+      summary: Danh sach san pham
+      operationId: design_first.handlers.list_products
+      responses:
+        '200':
+          description: Danh sach san pham
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      tags: [products]
+      summary: Tao san pham; YAML kiem tra request
+      operationId: design_first.handlers.create_product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+            example:
+              name: Man hinh
+              price: 2500000
+      responses:
+        '201':
+          description: Da tao san pham
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Du lieu khong dung hop dong OpenAPI
+  /products/{product_id}:
+    parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [products]
+      summary: Lay mot san pham
+      operationId: design_first.handlers.get_product
+      responses:
+        '200':
+          description: San pham
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [products]
+      summary: Xoa san pham
+      operationId: design_first.handlers.delete_product
+      responses:
+        '204':
+          description: Da xoa, khong co response body
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  schemas:
+    ProductInput:
+      type: object
+      additionalProperties: false
+      required: [name, price]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        price:
+          type: number
+          minimum: 0
+    Product:
+      type: object
+      additionalProperties: false
+      required: [id, name, price]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        price:
+          type: number
+          minimum: 0
+  responses:
+    NotFound:
+      description: Khong tim thay san pham
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [message]
+            properties:
+              message:
+                type: string

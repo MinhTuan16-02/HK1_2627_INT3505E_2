@@ -1,0 +1,4 @@
+flask-smorest>=0.47,<0.48
+connexion[flask,swagger-ui,uvicorn]>=3.3,<4
+pytest>=8,<10
+httpx>=0.28,<0.29
