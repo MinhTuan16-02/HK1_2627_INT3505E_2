@@ -1,0 +1,38 @@
+extends: ["spectral:oas"]
+rules:
+  response-200-has-properties:
+    description: "JSON response 200 must define an object schema with properties"
+    given: "$.paths.*.*.responses[200]"
+    severity: error
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [content]
+          properties:
+            content:
+              type: object
+              required: [application/json]
+              properties:
+                application/json:
+                  type: object
+                  required: [schema]
+                  properties:
+                    schema:
+                      anyOf:
+                        - type: object
+                          required: [type, properties]
+                          properties:
+                            type: {const: object}
+                            properties: {type: object, minProperties: 1}
+                        - type: object
+                          required: [type, items]
+                          properties:
+                            type: {const: array}
+                            items:
+                              type: object
+                              required: [type, properties]
+                              properties:
+                                type: {const: object}
+                                properties: {type: object, minProperties: 1}
