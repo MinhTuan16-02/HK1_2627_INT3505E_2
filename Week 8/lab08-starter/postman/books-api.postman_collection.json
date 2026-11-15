@@ -73,6 +73,7 @@
                 "exec": [
                   "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
                   "pm.test(\"positive id\", () => pm.expect(pm.response.json().id).to.be.above(0));",
+                  "pm.test(\"book fields\", () => pm.expect(pm.response.json()).to.have.all.keys(\"id\", \"title\", \"author\", \"year\", \"isbn\"));",
                   "if (pm.response.code === 201) pm.collectionVariables.set(\"book_id\", pm.response.json().id);"
                 ]
               }
@@ -145,7 +146,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"updated title\", () => pm.expect(pm.response.json().title).to.eql(\"DDIA revised\"));"
+                  "pm.test(\"updated title\", () => pm.expect(pm.response.json().title).to.eql(\"DDIA revised\"));",
+                  "pm.test(\"book fields\", () => pm.expect(pm.response.json()).to.have.all.keys(\"id\", \"title\", \"author\", \"year\", \"isbn\"));"
                 ]
               }
             }
@@ -181,26 +183,80 @@
           ]
         }
       ]
-    }
-    ,{
+    },
+    {
       "name": "error-cases",
       "item": [
         {
           "name": "POST /books - missing title",
           "request": {
             "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "url": {"raw": "{{base_url}}/books", "host": ["{{base_url}}"], "path": ["books"]},
-            "body": {"mode": "raw", "raw": "{\"author\": \"Tester\"}", "options": {"raw": {"language": "json"}}}
-          }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/books",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "books"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"author\": \"Tester\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"missing title error\", () => { const body = pm.response.json(); pm.expect(body.code).to.eql(\"VALIDATION_ERROR\"); pm.expect(body.message).to.be.a(\"string\"); pm.expect(body.errors).to.be.an(\"array\"); pm.expect(body.errors.some(error => error.field === \"title\" && typeof error.message === \"string\")).to.be.true; });"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /books/9999 - not found",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {"raw": "{{base_url}}/books/9999", "host": ["{{base_url}}"], "path": ["books", "9999"]}
-          }
+            "url": {
+              "raw": "{{base_url}}/books/9999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "books",
+                "9999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 Not Found\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"not found error\", () => { const body = pm.response.json(); pm.expect(body.code).to.eql(\"NOT_FOUND\"); pm.expect(body.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
         }
       ]
     }
