@@ -74,7 +74,8 @@
                   "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
                   "pm.test(\"positive id\", () => pm.expect(pm.response.json().id).to.be.above(0));",
                   "pm.test(\"book fields\", () => pm.expect(pm.response.json()).to.have.all.keys(\"id\", \"title\", \"author\", \"year\", \"isbn\"));",
-                  "if (pm.response.code === 201) pm.collectionVariables.set(\"book_id\", pm.response.json().id);"
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"book_id\", pm.response.json().id);",
+                  "pm.test(\"book_id saved\", () => { const id = pm.collectionVariables.get(\"book_id\"); pm.expect(id).to.not.be.oneOf([undefined, null, \"\"]); pm.expect(Number.isInteger(Number(id)) && Number(id) > 0).to.be.true; });"
                 ]
               }
             }
