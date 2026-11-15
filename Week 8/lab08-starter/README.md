@@ -135,3 +135,19 @@ lab08-starter/
 
 - OpenAPI cố ý chứa lỗi nên các công cụ contract check phải fail **trước khi sửa**.
 - `pytest` và Newman đều chạy được độc lập sau khi đã cài dependency, không cần Postman GUI.
+
+## Chạy Newman cho Lab 3
+
+Khởi động Flask trong một terminal:
+
+```powershell
+.\.venv\Scripts\python -m app --port 5000
+```
+
+Trong terminal khác, chạy collection và xuất báo cáo JUnit (cần Node.js và npm):
+
+```powershell
+npx newman run postman/books-api.postman_collection.json -e postman/local.postman_environment.json -r cli,junit --reporter-junit-export reports/junit.xml
+```
+
+Dừng Flask bằng `Ctrl+C` sau khi chạy xong.
